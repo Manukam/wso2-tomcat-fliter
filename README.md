@@ -15,7 +15,7 @@ values can be injected in to the outgoing HTTP request's headers.
 ...
     <filter>
         <filter-name>SCIM2-additional-attribute-filter</filter-name>
-        <filter-class>com.wso2.sample.CustomFilter</filter-class>
+        <filter-class>CustomFilter</filter-class>
         <init-param>
             <param-name>reqHeadersList</param-name>
             <param-value>x-forwarded-for, userID</param-value>
@@ -23,6 +23,7 @@ values can be injected in to the outgoing HTTP request's headers.
         <init-param>
              <param-name>reqHeadersList</param-name>
              <param-value>x-forwarded-for, userID</param-value>
+             <url-pattern>/*</url-pattern>
         </init-param>
     </filter>
     ...
