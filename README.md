@@ -10,7 +10,7 @@ values can be injected in to the outgoing HTTP request's headers.
 ## Instructions
 1. Build and place the jar inside the ```<IS_HOME>/repository/components/lib``` directory.
 2. Register the new filter in the ```<IS_HOME>/repository/deployment/server/webapps/scim2/WEB-INF/web.xml``` as below.
-`
+```
 <web-app>
 ...
     <filter>
@@ -28,6 +28,7 @@ values can be injected in to the outgoing HTTP request's headers.
     </filter>
     ...
 </web-app>
+```
 3. In the `reqHeadersList` param, you can define all the headers(comma seperated) that should be preserved to an ThreadLocal.
 4. In the `resHeadersList` param , you can define all the headers that should be populated in the out going response.
 The ThreadLocal response object should have the same keys as defined in the `resHeadersList` list.
