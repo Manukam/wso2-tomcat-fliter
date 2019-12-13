@@ -15,23 +15,54 @@ values can be injected in to the outgoing HTTP request's headers.
 ...
     <filter>
         <filter-name>SCIM2-additional-attribute-filter</filter-name>
-        <filter-class>CustomFilter</filter-class>
+        <filter-class>com.wso2.sample.filter.SCIM2AdditionalAttributeAppenderFilter</filter-class>
         <init-param>
             <param-name>reqHeadersList</param-name>
-            <param-value>x-forwarded-for, userID</param-value>
+            <param-value>header1, header2, header3</param-value>
         </init-param>
         <init-param>
-             <param-name>reqHeadersList</param-name>
-             <param-value>x-forwarded-for, userID</param-value>
-             <url-pattern>/*</url-pattern>
+             <param-name>resHeadersList</param-name>
+             <param-value>res-header1, res-header2, res-header3</param-value>
         </init-param>
-    </filter>
+        <init-param>
+             <param-name>HTTPMethods</param-name>
+             <param-value>DELETE</param-value>
+        </init-param>
+     </filter>
+     <filter-mapping>
+        <filter-name>SCIM2-additional-attribute-filter</filter-name>
+        <url-pattern>/Users/*</url-pattern>
+    </filter-mapping>
     ...
 </web-app>
 ```
-3. In the `reqHeadersList` param, you can define all the headers(comma seperated) that should be preserved to an ThreadLocal.
+3. In the `reqHeadersList` param, you can define all the headers(comma separated) that should be preserved to an ThreadLocal.
 4. In the `resHeadersList` param , you can define all the headers that should be populated in the out going response.
+5. In the `url-pattern` param, define the resource path you want thi filter to be engaged.
+6. `HTTPMethods` value can be a comma separated HTTP methods where you want this filter to be engaged.
 The ThreadLocal response object should have the same keys as defined in the `resHeadersList` list.
-5. Your responsibility is to populate a thread local object from your Custom User Store manager with the key names
+7. Your responsibility is to populate a thread local object from your Custom User Store manager with the key names
 defined in the `resHeadersList`. So that, this filter can extract them from the ThreadLocal in the response flow and set
 as HTTP headers in the outgoing response.
+Sample implementation for `User store` side logic would be as follows.
+```java
+import com.wso2.sample.filter.SCIM2AdditionalAttributeAppenderFilter;
+
+public class ReadWriteLDAPUserStoreManager extends ReadOnlyLDAPUserStoreManager {
+
+    @Override
+    public void doDeleteUser(String userName) throws UserStoreException {
+
+        Map<String, String> additionalAttributes = SCIM2AdditionalAttributeAppenderFilter.getUserThreadLocal();
+        for (String key : additionalAttributes.keySet()) {
+            log.info(key + " : "  + additionalAttributes.get(key));
+        }
+
+        additionalAttributes.clear();
+        additionalAttributes.put("res-header1", "response value 1");
+        additionalAttributes.put("res-header2", "response value 2");
+        SCIM2AdditionalAttributeAppenderFilter.setUserThreadLocal(additionalAttributes);
+        ...
+
+```
+

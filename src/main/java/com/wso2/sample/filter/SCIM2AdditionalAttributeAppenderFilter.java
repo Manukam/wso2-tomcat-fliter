@@ -11,7 +11,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Hello world!
+ * This is a sample implementation of how to pass additional parameters from SCImM2 request to the user core level using
+ * a ThreadLocal. Also, how to send additional parameters from user core level to the SCIM2 response as HTTP headers.
  */
 public class SCIM2AdditionalAttributeAppenderFilter implements Filter {
 
@@ -32,19 +33,62 @@ public class SCIM2AdditionalAttributeAppenderFilter implements Filter {
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
             throws IOException, ServletException {
 
-        Map<String, String> additionalAttributes = null;
+        Map<String, String> additionalAttributes;
         String headersString;
         String[] headers;
         String value;
 
+        if (getUserThreadLocal() != null) {
+            getUserThreadLocal().clear();
+            log.debug("SCIM2 filter cleared the ThreadLocal");
+        }
+
+        HttpServletRequest httpServletRequest = (HttpServletRequest) servletRequest;
+
+        // In flow
+        if (filterConfig.getInitParameter(REQ_HEADERS_LIST) != null && !filterConfig.getInitParameter(REQ_HEADERS_LIST).trim().isEmpty()
+                && filterConfig.getInitParameter(HTTP_METHODS) != null && !filterConfig.getInitParameter(HTTP_METHODS).trim().isEmpty()) {
+
+            // If the request's HTTP method is included in the defined set, proceed further.
+            String httpMethodsString = filterConfig.getInitParameter(HTTP_METHODS);
+            String[] httpMethods = httpMethodsString.split(",");
+            boolean isHttpMethodMatched = false;
+            for (String httpMethod : httpMethods) {
+                if (httpMethod.equalsIgnoreCase(httpServletRequest.getMethod())) {
+                    isHttpMethodMatched = true;
+                    break;
+                }
+            }
+
+            // If the defined HTTP headers are there in the request, set them to the ThreadLocal.
+            if (isHttpMethodMatched) {
+                additionalAttributes = new HashMap<>();
+                headersString = filterConfig.getInitParameter(REQ_HEADERS_LIST);
+                headers = headersString.split(",");
+                for (String header : headers) {
+                    header = header.trim();
+                    value = httpServletRequest.getHeader(header);
+                    if (value != null) {
+                        additionalAttributes.put(header, value);
+                    }
+                }
+                setUserThreadLocal(additionalAttributes);
+            }
+        }
+
+        // Continue the filter chain and the WSO2 internals. (user-core etc.)
+        filterChain.doFilter(servletRequest, servletResponse);
+
         // Out flow
-        if (getUserThreadLocal() != null && !getUserThreadLocal().isEmpty() &&
-                filterConfig.getInitParameter(RES_HEADERS_LIST) != null && !filterConfig.getInitParameter(RES_HEADERS_LIST).trim().isEmpty()) {
+        if (getUserThreadLocal() != null && !getUserThreadLocal().isEmpty() && filterConfig.getInitParameter(RES_HEADERS_LIST) != null
+                && !filterConfig.getInitParameter(RES_HEADERS_LIST).trim().isEmpty()) {
+
+            HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
+
+            // Check if thread local has any defined response headers. If so, set them as HTTP headers in the response.
             additionalAttributes = getUserThreadLocal();
             headersString = filterConfig.getInitParameter(RES_HEADERS_LIST);
             headers = headersString.split(",");
-            HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
-
             for (String header : headers) {
                 header = header.trim();
                 value = additionalAttributes.get(header);
@@ -52,42 +96,12 @@ public class SCIM2AdditionalAttributeAppenderFilter implements Filter {
                     httpServletResponse.setHeader(header, value);
                 }
             }
+        }
+
+        if (getUserThreadLocal() != null) {
             getUserThreadLocal().clear();
-            filterChain.doFilter(servletRequest, httpServletResponse);
-            return;
+            log.debug("SCIM2 filter cleared the ThreadLocal");
         }
-
-        // In flow
-        if (filterConfig.getInitParameter(REQ_HEADERS_LIST) != null && !filterConfig.getInitParameter(REQ_HEADERS_LIST).trim().isEmpty()
-                && filterConfig.getInitParameter(HTTP_METHODS) != null && !filterConfig.getInitParameter(HTTP_METHODS).trim().isEmpty()) {
-
-            // If the request's HTTP method is not included in the defined set, return from the filter.
-            String httpMethodsString = filterConfig.getInitParameter(HTTP_METHODS);
-            String[] httpMethods = httpMethodsString.split(",");
-            HttpServletRequest httpServletRequest = (HttpServletRequest) servletRequest;
-            for (String httpMethod : httpMethods) {
-                if (httpMethod.equalsIgnoreCase(httpServletRequest.getMethod())) {
-                    break;
-                }
-                filterChain.doFilter(servletRequest, servletResponse);
-                return;
-            }
-
-            // If the defined HTTP headers are there in the request, set them to the ThreadLocal.
-            additionalAttributes = new HashMap<>();
-            headersString = filterConfig.getInitParameter(REQ_HEADERS_LIST);
-            headers = headersString.split(",");
-            for (String header : headers) {
-                header = header.trim();
-                value = httpServletRequest.getHeader(header);
-                if (value != null) {
-                    additionalAttributes.put(header, value);
-                }
-            }
-        }
-        setUserThreadLocal(additionalAttributes);
-        filterChain.doFilter(servletRequest, servletResponse);
-        return;
     }
 
     public static Map<String, String> getUserThreadLocal() {
