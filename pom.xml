@@ -6,7 +6,7 @@
 
     <groupId>com.wso2.sample</groupId>
     <artifactId>com.wso2.sample.tomcat.filter</artifactId>
-    <version>1.0</version>
+    <version>1.1</version>
 
     <name>com.wso2.sample.tomcat.filter</name>
     <!-- FIXME change it to the project's website -->
