@@ -1,5 +1,6 @@
 package com.wso2.sample.filter;
 
+import com.wso2.sample.filter.utils.BufferResponseWrapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -76,14 +77,16 @@ public class SCIM2AdditionalAttributeAppenderFilter implements Filter {
             }
         }
 
+        HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
+        BufferResponseWrapper wrapper = new BufferResponseWrapper(httpServletResponse);
+
         // Continue the filter chain and the WSO2 internals. (user-core etc.)
-        filterChain.doFilter(servletRequest, servletResponse);
+        filterChain.doFilter(servletRequest, wrapper);
+        servletResponse.getOutputStream().write(wrapper .getWrapperBytes());
 
         // Out flow
         if (getUserThreadLocal() != null && !getUserThreadLocal().isEmpty() && filterConfig.getInitParameter(RES_HEADERS_LIST) != null
                 && !filterConfig.getInitParameter(RES_HEADERS_LIST).trim().isEmpty()) {
-
-            HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
 
             // Check if thread local has any defined response headers. If so, set them as HTTP headers in the response.
             additionalAttributes = getUserThreadLocal();
