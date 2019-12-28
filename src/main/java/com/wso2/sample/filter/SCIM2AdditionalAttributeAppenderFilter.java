@@ -45,6 +45,8 @@ public class SCIM2AdditionalAttributeAppenderFilter implements Filter {
         }
 
         HttpServletRequest httpServletRequest = (HttpServletRequest) servletRequest;
+        HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
+        BufferResponseWrapper wrapper = null;
 
         // In flow
         if (filterConfig.getInitParameter(REQ_HEADERS_LIST) != null && !filterConfig.getInitParameter(REQ_HEADERS_LIST).trim().isEmpty()
@@ -74,19 +76,23 @@ public class SCIM2AdditionalAttributeAppenderFilter implements Filter {
                     }
                 }
                 setUserThreadLocal(additionalAttributes);
+                wrapper = new BufferResponseWrapper(httpServletResponse);
             }
         }
 
-        HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
-        BufferResponseWrapper wrapper = new BufferResponseWrapper(httpServletResponse);
 
         // Continue the filter chain and the WSO2 internals. (user-core etc.)
-        filterChain.doFilter(servletRequest, wrapper);
-        servletResponse.getOutputStream().write(wrapper .getWrapperBytes());
+        if(wrapper == null) {
+            filterChain.doFilter(servletRequest, servletResponse);
+        } else {
+            filterChain.doFilter(servletRequest, wrapper);
+        }
 
         // Out flow
         if (getUserThreadLocal() != null && !getUserThreadLocal().isEmpty() && filterConfig.getInitParameter(RES_HEADERS_LIST) != null
                 && !filterConfig.getInitParameter(RES_HEADERS_LIST).trim().isEmpty()) {
+
+            servletResponse.getOutputStream().write(wrapper.getWrapperBytes());
 
             // Check if thread local has any defined response headers. If so, set them as HTTP headers in the response.
             additionalAttributes = getUserThreadLocal();
