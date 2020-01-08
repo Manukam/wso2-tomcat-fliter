@@ -82,7 +82,7 @@ public class SCIM2AdditionalAttributeAppenderFilter implements Filter {
 
 
         // Continue the filter chain and the WSO2 internals. (user-core etc.)
-        if(wrapper == null) {
+        if (wrapper == null) {
             filterChain.doFilter(servletRequest, servletResponse);
         } else {
             filterChain.doFilter(servletRequest, wrapper);
