@@ -80,7 +80,6 @@ public class SCIM2AdditionalAttributeAppenderFilter implements Filter {
             }
         }
 
-
         // Continue the filter chain and the WSO2 internals. (user-core etc.)
         if (wrapper == null) {
             filterChain.doFilter(servletRequest, servletResponse);
@@ -105,6 +104,9 @@ public class SCIM2AdditionalAttributeAppenderFilter implements Filter {
                     httpServletResponse.setHeader(header, value);
                 }
             }
+        } else if (wrapper != null) {
+            // Commit the response even if we are not setting any additional response headers
+            servletResponse.getOutputStream().write(wrapper.getWrapperBytes());
         }
 
         if (getUserThreadLocal() != null) {
